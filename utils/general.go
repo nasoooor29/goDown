@@ -1,11 +1,17 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
+	"time"
 )
 
 func MatchUrlHosts(url1, url2 string) (bool, error) {
@@ -43,4 +49,30 @@ func ExtractBetweenSingleQuotes(input string) (string, bool) {
 		return "", false
 	}
 	return matches[1], true
+}
+
+func GenHashBasedOnTime() string {
+	timestamp := time.Now().UnixNano() / int64(time.Millisecond)
+	uniqueInfo := rand.Int63()
+	id := fmt.Sprintf("%v_%v", timestamp, uniqueInfo)
+	hash := sha256.New()
+	hash.Write([]byte(id))
+	hashed := hash.Sum(nil)
+	hashedString := hex.EncodeToString(hashed)
+	return hashedString
+}
+
+func RemoveNonEnglishLetters(input string) string {
+	reg := regexp.MustCompile("[^a-zA-Z]+")
+	result := reg.ReplaceAllString(input, "")
+	return result
+}
+
+func ReturnAsJson(anything any) string {
+	jsonString, err := json.Marshal(anything)
+	if err != nil {
+		return err.Error()
+	}
+	str := string(jsonString)
+	return strings.ReplaceAll(str, "\\u0026", "&")
 }

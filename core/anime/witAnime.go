@@ -27,7 +27,7 @@ func NewWitAnime(logger *zap.SugaredLogger) *WitAnime {
 			// IndexPageUrlRegex:          `^(https?:\/\/)witanime\.pics\/?$`,
 			// EpisodeArchivePageUrlRegex: `^(https?:\/\/)witanime\.pics\/episode\/?(?:\/page\/\d+\/?)?$`,
 			// MediaArchivePageUrlRegex:   `^(https?:\/\/)?witanime\.pics/%[0-9a-fA-F]{2}(%[0-9a-fA-F]{2})*(/page/\d+)?/?$`,
-			SearchUrl: "https://witanime.pics/?search_param=animes&s=[REPLACE]",
+			SearchUrl:        "https://witanime.pics/?search_param=animes&s=[REPLACE]",
 			MediaPageRegex:   `^(https?:\/\/)witanime\.pics/anime/[a-zA-Z0-9\-]+$`,
 			EpisodePageRegex: `^(https?:\/\/)witanime\.pics/episode/[^/]+/$`,
 		},
@@ -225,7 +225,7 @@ func (w *WitAnime) SearchForMedia(query string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	doc.Find(".anime-card-title a").Each(func(i int, s *goquery.Selection) {
 		mediaUrl := s.AttrOr("href", "")
 		if mediaUrl == "" {
@@ -242,23 +242,162 @@ func (w *WitAnime) SearchForMedia(query string) ([]string, error) {
 	return MediaUrls, nil
 }
 
-func (w *WitAnime) ScrapeEpisodePage() {
-
-}
 func (w *WitAnime) ScrapeMediaPage(mediaUrl string) (*types.Media, error) {
 	doc, err := utils.GetDocFromUrl(w.Logger, http.MethodGet, mediaUrl)
 	if err != nil {
 		return nil, err
 	}
-	title := strings.TrimSpace(doc.Find("h1").Text())
-	m := types.Media{
-		BaseInfo: types.BaseInfo{
-			Name: title,
-		},
+	name := strings.TrimSpace(doc.Find("h1").Text())
+	if name == "" {
+		w.Logger.Errorw("could not find the title", "mediaUrl", mediaUrl)
+		return nil, fmt.Errorf("could not find the title")
 	}
-	// fmt.Printf("title: %v\n")
-	return &m, nil
+
+	media := types.NewMedia(types.Anime, name)
+
+	if summary := strings.TrimSpace(doc.Find("p.anime-story").Text()); summary == "" {
+		w.Logger.Warnw("could not find the anime summary", "mediaUrl", mediaUrl)
+	} else {
+		media.Summary = summary
+	}
+
+	if img := strings.TrimSpace(doc.Find(".anime-thumbnail img").AttrOr("src", "")); img == "" {
+		w.Logger.Warnw("could not find the anime thumbnail", "mediaUrl", mediaUrl)
+	} else {
+		media.ThumnailUrl = img
+	}
+
+	media.MetaData = w.getMediaMetaData(doc)
+	media.Tags = w.getMediaTags(doc)
+	media.Episodes = w.getMediaPageEpisodes(doc)
+	return nil, nil
 }
+
+func (w *WitAnime) getMediaMetaData(doc *goquery.Document) map[string]string {
+	metaData := map[string]string{}
+	doc.Find(".anime-info-left .anime-info").Each(func(i int, s *goquery.Selection) {
+		k := strings.ReplaceAll(s.Find("span").First().Text(), ":", "")
+		s.Find("span").First().Remove()
+		v := s.Text()
+		if k != "" {
+			metaData[k] = v
+		}
+	})
+	return metaData
+}
+
+func (w *WitAnime) getMediaTags(doc *goquery.Document) []string {
+	tags := []string{}
+	doc.Find("ul.anime-genres a").Each(func(i int, s *goquery.Selection) {
+		tag := s.Text()
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	})
+	return tags
+}
+
+func (w *WitAnime) getMediaPageEpisodes(doc *goquery.Document) []types.Episode {
+	episodes := []types.Episode{}
+	doc.Find(".episodes-card-title a").Each(func(i int, s *goquery.Selection) {
+		epName := s.Text()
+		epUrlDecoded := w.findEpisodeUrl(s)
+		if epUrlDecoded == "" {
+			return
+		}
+		if epName == "" {
+			w.Logger.Errorw("could not find episode name", "selection", s)
+		}
+		w.Logger.Infow("scraped episode", "episodeDecodedUrl", epUrlDecoded, "episodeName", epName)
+		ep := types.NewEpisode(types.Anime, epName)
+		ep.Downloadable = types.Downloadable{
+			FileName: epName,
+			Index:    i,
+			URL:      epUrlDecoded,
+		}
+		episodes = append(episodes, *ep)
+	})
+	return episodes
+}
+
+func (w *WitAnime) ScrapeEpisodePage(epData *types.Episode) error {
+	doc, err := utils.GetDocFromUrl(w.Logger, http.MethodGet, epData.URL)
+	if err != nil {
+		return err
+	}
+	ws := w.getWatchingMediaServers(doc)
+	if len(ws) == 0 {
+		w.Logger.Warnw("could not find any watching servers", epData)
+	}
+	epData.WatchMediaServers = ws
+	ds := w.getDownloadMediaServers(doc)
+	if len(ws) == 0 {
+		w.Logger.Warnw("could not find any Download servers", epData)
+	}
+	epData.DownloadMediaServers = ds
+	return nil
+}
+
+func (w *WitAnime) getWatchingMediaServers(doc *goquery.Document) map[types.Quality][]types.MediaServer {
+	servers := map[types.Quality][]types.MediaServer{}
+	doc.Find("#episode-servers a").Each(func(i int, s *goquery.Selection) {
+		var q types.Quality
+		epUrlEncoded, exist := s.Attr("data-url")
+		if !exist {
+			w.Logger.Warn("could not find the data-url for the watching server")
+			return
+		}
+		epUrlDecoded, err := utils.DecodeAtob(epUrlEncoded)
+		if err != nil {
+			w.Logger.Warnw("could not decode the url", "encoded", epUrlEncoded)
+			return
+		}
+		serverName := strings.TrimSpace(s.Text())
+		serverArr := strings.Split(serverName, "-")
+		if len(serverArr) <= 1 {
+			q = types.FindQuality(serverArr[0])
+		} else if len(serverArr) > 1 {
+			q = types.FindQuality(serverArr[1])
+		}
+		servers[q] = append(servers[q], types.MediaServer{
+			Name:           serverName,
+			Url:            epUrlDecoded,
+			EpisodeQuality: q,
+			Rank:           types.Unkown,
+		})
+	})
+	return servers
+}
+
+func (w *WitAnime) getDownloadMediaServers(doc *goquery.Document) map[types.Quality][]types.MediaServer {
+	servers := map[types.Quality][]types.MediaServer{}
+	doc.Find(".episode-download-container ul.quality-list").Each(func(i int, s *goquery.Selection) {
+		q := types.FindQuality(s.Find("li").First().Text())
+		// fmt.Printf("q: %v\n", q)
+		s.Find("a").Each(func(i int, s *goquery.Selection) {
+			epUrlEncoded, exist := s.Attr("data-url")
+			if !exist {
+				w.Logger.Warn("could not find the data-url for the watching server")
+				return
+			}
+			epUrlDecoded, err := utils.DecodeAtob(epUrlEncoded)
+			fmt.Printf("epUrlDecoded: %v\n", epUrlDecoded)
+			if err != nil {
+				w.Logger.Warnw("could not decode the url", "encoded", epUrlEncoded)
+				return
+			}
+			serverName := strings.TrimSpace(s.Text())
+			servers[q] = append(servers[q], types.MediaServer{
+				Name:           serverName,
+				Url:            epUrlDecoded,
+				EpisodeQuality: q,
+				Rank:           types.Unkown,
+			})
+		})
+	})
+	return servers
+}
+
 func (w *WitAnime) DownloadEpisode() {
 
 }

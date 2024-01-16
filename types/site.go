@@ -18,7 +18,7 @@ type SiteScraper interface {
 	ScrapeEpisodeArchive() ([]string, error) 
 	ScrapeEpisodeArchivePage(*[]string, string) (string, error)
 	ScrapeLatestEpisodes() ([]string, error)
-	ScrapeEpisodePage()
+	ScrapeEpisodePage(*Episode) error
 
 	ScrapeMediaArchive() ([]string, error) 
 	ScrapeMediaArchivePage(*[]string, string) (string, error)

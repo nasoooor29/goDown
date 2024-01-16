@@ -1,5 +1,11 @@
 package types
 
+import (
+	"goDown/utils"
+	"path"
+	"time"
+)
+
 type DownloadStatus int
 
 const (
@@ -16,25 +22,67 @@ const (
 )
 
 type BaseInfo struct {
-	Id           string
 	Name         string
-	CreationTime int
+	Id           string
+	CreationTime time.Time
 	DlStatus     DownloadStatus
 	WaStatus     WatchStatus
-	MetaData     map[string]string
 }
 
-type DownloadableType int
-
-const (
-	Image DownloadableType = iota
-	Video
-	Text
-)
+// This function will generate most of the data just include the name and metadata
+func NewBaseInfo(n string) *BaseInfo {
+	return &BaseInfo{
+		Name:         n,
+		Id:           utils.GenHashBasedOnTime(),
+		CreationTime: time.Now(),
+		DlStatus:     NotDownloaded,
+		WaStatus:     NotWatched,
+	}
+}
 
 type Downloadable struct {
-	Path     string
-	URL      string
-	FileName string
-	Type     DownloadableType
+	Index int
+	URL   string
+	FileName  string
+}
+
+type Quality string
+
+const (
+	FHD       Quality = "FHD"
+	HD        Quality = "HD"
+	SD        Quality = "SD"
+	Undefined Quality = "Undefined"
+)
+
+func FindQuality(input string) Quality {
+	cleanInput := utils.RemoveNonEnglishLetters(input)
+	switch cleanInput {
+	case "FHD":
+		return FHD
+	case "HD":
+		return HD
+	case "SD":
+		return SD
+	default:
+		return Undefined
+	}
+}
+
+const DefaultPath = "."
+
+type Config struct {
+	BasePath  string
+	AnimePath string
+	MangaPath string
+	NovelPath string
+}
+
+func NewDefaultConfig() *Config {
+	return &Config{
+		BasePath:  DefaultPath,
+		AnimePath: path.Join(DefaultPath, "Anime"),
+		MangaPath: path.Join(DefaultPath, "Manga"),
+		NovelPath: path.Join(DefaultPath, "Novel"),
+	}
 }

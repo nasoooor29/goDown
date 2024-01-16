@@ -32,8 +32,8 @@ func (sm *SiteManager) FindSite(logger *zap.SugaredLogger, url string) (types.Si
 		}
 		if err != nil {
 			logger.Warnw("url matching error",
-				"url1", url,
-				"url2", site.GetSiteData().Url,
+				"user url", url,
+				// "Site url", site.GetSiteData().Url,
 				"error", err,
 			)
 		}

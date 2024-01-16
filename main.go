@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"goDown/core"
+	"goDown/types"
 	"goDown/utils"
 )
 
@@ -19,7 +20,15 @@ func main() {
 		return
 	}
 	// site.ScrapeMediaPage(url)
-	site.SearchForMedia("isekai")
+	// site.SearchForMedia("one piece")
+	// site.ScrapeMediaPage(url)
+	epUrl := "https://witanime.pics/episode/tsuki-ga-michibiku-isekai-douchuu-2nd-season-%d8%a7%d9%84%d8%ad%d9%84%d9%82%d8%a9-1/"
+	site.ScrapeEpisodePage(&types.Episode{
+		BaseInfo: *types.NewBaseInfo("EPEPEPE"),
+		Downloadable: types.Downloadable{
+			URL: epUrl,
+		},
+	})
 
 	// u := site.GetSiteData().EpisodeArchivePageUrl
 	// site.ScrapeMediaArchive()

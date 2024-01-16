@@ -1,26 +1,5 @@
 package types
 
-type EpisodeType int
-
-const (
-	MangaChapter EpisodeType = iota
-	AnimeEpisode
-	NovelChapter
-)
-
-type Episode struct {
-	BaseInfo
-	Downloadable
-	Type EpisodeType
-}
-
-
-func NewEpisode(t EpisodeType) *Episode {
-	return &Episode{
-		Type: t,
-	}
-}
-
 type MediaType int
 
 const (
@@ -29,16 +8,53 @@ const (
 	Novel
 )
 
-type Media struct {
-	BaseInfo
+type Episode struct {
 	Downloadable
-	Episodes []*Episode
-	Type     MediaType
+	BaseInfo           //auto filled
+	Type     MediaType // auto filled
+
+	// Not so sure about this decision
+	WatchMediaServers    map[Quality][]MediaServer
+	DownloadMediaServers map[Quality][]MediaServer
 }
 
-func NewMedia(t MediaType) *Media {
+type MediaServerRank int
+
+const (
+	Fast MediaServerRank = iota
+	Medium
+	Slow
+	Unkown
+)
+
+type MediaServer struct {
+	Name           string
+	Url            string
+	Rank           MediaServerRank
+	EpisodeQuality Quality
+}
+
+func NewEpisode(t MediaType, name string) *Episode {
+	return &Episode{
+		BaseInfo: *NewBaseInfo(name),
+		Type:     t,
+	}
+}
+
+type Media struct {
+	BaseInfo              // auto filled
+	Type        MediaType // auto filled
+	Summary     string
+	ThumnailUrl string
+	Tags        []string
+	Episodes    []Episode
+	MetaData    map[string]string
+}
+
+func NewMedia(t MediaType, name string) *Media {
 	return &Media{
-		Type: t,
+		BaseInfo: *NewBaseInfo(name),
+		Type:     t,
 	}
 }
 
