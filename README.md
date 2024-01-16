@@ -5,11 +5,15 @@ TODO:
 *   Do the DB
 
 
+```
 CRUD mapping:
     Post    -> Create
     Get     -> Read
     Put     -> Update
     Delete  -> Delete
+```
+
+```
 
 
 Api Endpoints:
@@ -60,3 +64,4 @@ Api Endpoints:
         Update {
             
         }
+```
