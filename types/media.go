@@ -14,8 +14,7 @@ type Episode struct {
 	Type     MediaType // auto filled
 
 	// Not so sure about this decision
-	WatchMediaServers    map[Quality][]MediaServer
-	DownloadMediaServers map[Quality][]MediaServer
+	DownloadServers map[Quality][]MediaServer
 }
 
 type MediaServerRank int

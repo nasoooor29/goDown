@@ -328,49 +328,19 @@ func (w *WitAnime) ScrapeEpisodePage(epData *types.Episode) error {
 	if err != nil {
 		return err
 	}
-	ws := w.getWatchingMediaServers(doc)
-	if len(ws) == 0 {
-		w.Logger.Warnw("could not find any watching servers", epData)
-	}
-	epData.WatchMediaServers = ws
+	// ws := w.getWatchingMediaServers(doc)
+	// if len(ws) == 0 {
+	// 	w.Logger.Warnw("could not find any watching servers", epData)
+	// }
+	// epData.WatchMediaServers = ws
 	ds := w.getDownloadMediaServers(doc)
-	if len(ws) == 0 {
+	epData.DownloadServers = ds
+	if len(ds) == 0 {
 		w.Logger.Warnw("could not find any Download servers", epData)
 	}
-	epData.DownloadMediaServers = ds
 	return nil
 }
 
-func (w *WitAnime) getWatchingMediaServers(doc *goquery.Document) map[types.Quality][]types.MediaServer {
-	servers := map[types.Quality][]types.MediaServer{}
-	doc.Find("#episode-servers a").Each(func(i int, s *goquery.Selection) {
-		var q types.Quality
-		epUrlEncoded, exist := s.Attr("data-url")
-		if !exist {
-			w.Logger.Warn("could not find the data-url for the watching server")
-			return
-		}
-		epUrlDecoded, err := utils.DecodeAtob(epUrlEncoded)
-		if err != nil {
-			w.Logger.Warnw("could not decode the url", "encoded", epUrlEncoded)
-			return
-		}
-		serverName := strings.TrimSpace(s.Text())
-		serverArr := strings.Split(serverName, "-")
-		if len(serverArr) <= 1 {
-			q = types.FindQuality(serverArr[0])
-		} else if len(serverArr) > 1 {
-			q = types.FindQuality(serverArr[1])
-		}
-		servers[q] = append(servers[q], types.MediaServer{
-			Name:           serverName,
-			Url:            epUrlDecoded,
-			EpisodeQuality: q,
-			Rank:           types.Unkown,
-		})
-	})
-	return servers
-}
 
 func (w *WitAnime) getDownloadMediaServers(doc *goquery.Document) map[types.Quality][]types.MediaServer {
 	servers := map[types.Quality][]types.MediaServer{}
