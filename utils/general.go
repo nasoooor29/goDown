@@ -76,3 +76,8 @@ func ReturnAsJson(anything any) string {
 	str := string(jsonString)
 	return strings.ReplaceAll(str, "\\u0026", "&")
 }
+
+
+func PadNumber(width, num int) string {
+	return fmt.Sprintf("%0*d", width, num)
+}

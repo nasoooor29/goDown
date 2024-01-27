@@ -15,16 +15,14 @@ type SiteDownloader interface {
 
 type SiteScraper interface {
 	// ScrapeIndexPage() 		// this page is used to get the latest episodes of the website
-	ScrapeEpisodeArchive() ([]string, error) 
+	ScrapeEpisodeArchive() ([]string, error)
 	ScrapeEpisodeArchivePage(*[]string, string) (string, error)
 	ScrapeLatestEpisodes() ([]string, error)
 	ScrapeEpisodePage(*Episode) error
-
-	ScrapeMediaArchive() ([]string, error) 
+	ScrapeMediaArchive() ([]string, error)
 	ScrapeMediaArchivePage(*[]string, string) (string, error)
 	ScrapeLatestMedia() ([]string, error)
 	ScrapeMediaPage(string) (*Media, error)
-
 	SearchForMedia(string) ([]string, error)
 }
 
@@ -58,3 +56,16 @@ type SiteData struct {
 func (s *SiteData) GetSiteData() *SiteData {
 	return s
 }
+
+type SiteFeature string
+
+const (
+	ScrapeEpisodeArchive     SiteFeature = "Scrape Episode Archive"
+	ScrapeEpisodeArchivePage SiteFeature = "Scrape Episode Archive Page"
+	ScrapeLatestEpisodes     SiteFeature = "Scrape Latest Episodes"
+	ScrapeEpisodePage        SiteFeature = "Scrape Episode Page"
+	ScrapeMediaArchive       SiteFeature = "Scrape Media Archive"
+	ScrapeMediaArchivePage   SiteFeature = "Scrape Media Archive Page"
+	ScrapeLatestMedia        SiteFeature = "Scrape Latest Media"
+	ScrapeMediaPage          SiteFeature = "Scrape Media Page"
+)

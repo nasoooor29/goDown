@@ -12,17 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type WitAnime types.SiteData
+type WitAnime struct {
+	types.SiteData
+}
 
 func NewWitAnime(logger *zap.SugaredLogger) *WitAnime {
-	return &WitAnime{
+	d := types.SiteData{
 		Name:   "witanime",
-		Url:    "https://witanime.pics/",
+		Url:    "https://witanime.pics",
 		Logger: logger,
 		SiteUrls: types.SiteUrls{
-			IndexPageUrl:          "https://witanime.pics/",
-			EpisodeArchivePageUrl: "https://witanime.pics/episode/",
-			MediaArchivePageUrl:   "https://witanime.pics/%d9%82%d8%a7%d8%a6%d9%85%d8%a9-%d8%a7%d9%84%d8%a7%d9%86%d9%85%d9%8a/",
+			IndexPageUrl:          "https://witanime.pics",
+			EpisodeArchivePageUrl: "https://witanime.pics/episode",
+			MediaArchivePageUrl:   "https://witanime.pics/%d9%82%d8%a7%d8%a6%d9%85%d8%a9-%d8%a7%d9%84%d8%a7%d9%86%d9%85%d9%8a",
 
 			// IndexPageUrlRegex:          `^(https?:\/\/)witanime\.pics\/?$`,
 			// EpisodeArchivePageUrlRegex: `^(https?:\/\/)witanime\.pics\/episode\/?(?:\/page\/\d+\/?)?$`,
@@ -32,10 +34,13 @@ func NewWitAnime(logger *zap.SugaredLogger) *WitAnime {
 			EpisodePageRegex: `^(https?:\/\/)witanime\.pics/episode/[^/]+/$`,
 		},
 	}
+	return &WitAnime{
+		SiteData: d,
+	}
 }
 
 func (w *WitAnime) GetSiteData() *types.SiteData {
-	a := types.SiteData(*w)
+	a := types.SiteData(w.SiteData)
 	return &a
 }
 
@@ -61,8 +66,7 @@ func (w *WitAnime) ScrapeEpisodeArchive() ([]string, error) {
 	}
 	return arr, nil
 }
-func (w *WitAnime) ScrapeEpisodeArchivePage(EpisodeUrlsPtr *[]string, pageUrl string) (string, error) {
-	EpisodeUrls := *EpisodeUrlsPtr
+func (w *WitAnime) ScrapeEpisodeArchivePage(EpisodeUrls *[]string, pageUrl string) (string, error) {
 	doc, err := utils.GetDocFromUrl(w.Logger, http.MethodGet, pageUrl)
 	if err != nil {
 		return "", err
@@ -74,13 +78,13 @@ func (w *WitAnime) ScrapeEpisodeArchivePage(EpisodeUrlsPtr *[]string, pageUrl st
 		}
 		w.Logger.Infof("scraped episode link: %v", epUrlDecoded)
 
-		EpisodeUrls = append(EpisodeUrls, epUrlDecoded)
+		*EpisodeUrls = append(*EpisodeUrls, epUrlDecoded)
 	})
 	nextPageUrl, exist := doc.Find(".pagination li:last-child a").First().Attr("href")
 	if !exist {
 		return "", nil
 	}
-	if len(EpisodeUrls) == 0 {
+	if len(*EpisodeUrls) == 0 {
 		w.Logger.Warnf("could not find any episodes on page: %v", pageUrl)
 	}
 	return nextPageUrl, nil
@@ -161,8 +165,7 @@ func (w *WitAnime) ScrapeMediaArchive() ([]string, error) {
 	return arr, nil
 }
 
-func (w *WitAnime) ScrapeMediaArchivePage(MediaUrlsPtr *[]string, pageUrl string) (string, error) {
-	MediaUrls := *MediaUrlsPtr
+func (w *WitAnime) ScrapeMediaArchivePage(MediaUrls *[]string, pageUrl string) (string, error) {
 	doc, err := utils.GetDocFromUrl(w.Logger, http.MethodGet, pageUrl)
 	if err != nil {
 		return "", err
@@ -174,13 +177,13 @@ func (w *WitAnime) ScrapeMediaArchivePage(MediaUrlsPtr *[]string, pageUrl string
 			return
 		}
 		w.Logger.Infof("scraped episode link: %v", mediaUrl)
-		MediaUrls = append(MediaUrls, mediaUrl)
+		*MediaUrls = append(*MediaUrls, mediaUrl)
 	})
 	nextPageUrl, exist := doc.Find(".pagination a.next").First().Attr("href")
 	if !exist {
 		return "", nil
 	}
-	if len(MediaUrls) == 0 {
+	if len(*MediaUrls) == 0 {
 		w.Logger.Warnf("could not find any media on page: %v", pageUrl)
 	}
 	return nextPageUrl, nil
