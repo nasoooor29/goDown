@@ -15,11 +15,11 @@ import (
 )
 
 func MatchUrlHosts(url1, url2 string) (bool, error) {
-	url1Obj, err := url.Parse(url1)
+	url1Obj, err := url.Parse(strings.ToLower(url1))
 	if err != nil {
 		return false, err
 	}
-	url2Obj, err := url.Parse(url2)
+	url2Obj, err := url.Parse(strings.ToLower(url2))
 	if err != nil {
 		return false, err
 	}
@@ -76,7 +76,6 @@ func ReturnAsJson(anything any) string {
 	str := string(jsonString)
 	return strings.ReplaceAll(str, "\\u0026", "&")
 }
-
 
 func PadNumber(width, num int) string {
 	return fmt.Sprintf("%0*d", width, num)
